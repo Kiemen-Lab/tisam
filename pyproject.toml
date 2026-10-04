@@ -23,7 +23,7 @@ dependencies = [
 
 [project.optional-dependencies]
 train = [
-  "mammoth[tensorboard,torch] @ git+https://github.com/zydtiger/mammoth.git@v0.8.8",
+  "mammoth[tensorboard,torch] @ git+https://github.com/zydtiger/mammoth.git@v0.9.0",
   "albumentations>=2,<3",
   "opencv-python-headless<5.1",
   "pillow",

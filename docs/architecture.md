@@ -100,8 +100,8 @@ Mammoth owns cross-platform lease handling, exclusive text logs, phase/process
 terminal events, and log cleanup. TiSAM supplies configuration and checkpoint
 receipts, training metric fields, TensorBoard output, and Python logger routing.
 The lease remains held until checkpoint and log flushes finish. Training uses
-Mammoth 0.8.8's single-process Windows support; inference and data imports remain
-independent of Mammoth.
+Mammoth 0.9.0's single-process Windows support and compressed event streams;
+inference and data imports remain independent of Mammoth.
 
 Older TiSAM versions used a separate `.training.lock`. Stop older training
 processes before upgrading a run: old and new versions do not share the same

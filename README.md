@@ -293,7 +293,7 @@ encoder learning rates, early stopping, optional `torch.compile`, resumable
 `.pt` checkpoints and best `.safetensors` weights. Every invocation creates an
 attempt under `runs/<name>/logs/executions/<execution-id>/` containing:
 
-- `rank-0.jsonl`: Mammoth lifecycle, progress, epoch metrics, and checkpoint
+- `rank-0.jsonl.zst`: Mammoth lifecycle, progress, epoch metrics, and checkpoint
   publication receipts (paths, roles, epochs, byte sizes, SHA-256 hashes, and
   retired paths).
 - `rank-0.log`: Python logging diagnostics, including setup failures.
@@ -301,6 +301,12 @@ attempt under `runs/<name>/logs/executions/<execution-id>/` containing:
   the resolved configuration snapshot.
 - `tensorboard/`: dense metric history. Point TensorBoard at `runs/<name>/logs`
   to include all attempts and older runs.
+
+Event streams use seekable Zstandard compression. Read both new compressed streams
+and historical plain JSONL with Mammoth event readers; do not open compressed
+event files as text. The adjacent `.idx` file is a disposable live-read cache.
+Existing logs are not converted, and each new training attempt uses the compressed
+format.
 
 JSONL progress records include `batches_per_second`, an epoch-to-date rate,
 when elapsed time is positive. Rates are omitted if the clock has not advanced.
