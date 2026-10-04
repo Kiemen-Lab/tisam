@@ -1,3 +1,5 @@
+"""Verify TiSAM workflows, Mammoth event records, and checkpoint provenance."""
+
 import hashlib
 import json
 import logging
@@ -14,7 +16,7 @@ import portalocker
 import pytest
 import tifffile
 import torch
-from mammoth.core import claim_logical_run_lease
+from mammoth.core import claim_logical_run_lease, iter_execution_events
 from mammoth.core.artifacts import ArtifactVerificationError, inspect_artifact
 from PIL import Image
 from torch.utils.data import DataLoader
@@ -140,7 +142,8 @@ def test_training_resume_and_evaluation(small_model, tmp_path, monkeypatch):
     assert checkpoint is not None
     attempts = cfg.out_dir / cfg.name / "logs" / "executions"
     first = next(attempts.iterdir())
-    records = [json.loads(line) for line in (first / "rank-0.jsonl").read_text().splitlines()]
+    assert (first / "rank-0.jsonl.zst").is_file()
+    records = [event.to_dict() for event in iter_execution_events(first / "rank-0.jsonl.zst")]
     assert records[0]["event"] == "process_started"
     assert records[-1]["event"] == "process_completed" and records[-1]["exit_code"] == 0
     progress = [record for record in records if record["event"] == "progress"]
@@ -179,7 +182,7 @@ def test_training_resume_and_evaluation(small_model, tmp_path, monkeypatch):
     assert metadata["resume_checkpoint_sha256"] == latest["sha256"]
     assert metadata["starting_global_step"] == result.state.global_step
     assert metadata["starting_epoch"] == cfg.epochs
-    assert json.loads((second / "rank-0.jsonl").read_text().splitlines()[-1])["exit_code"] == 0
+    assert list(iter_execution_events(second / "rank-0.jsonl.zst"))[-1].exit_code == 0
     metrics = evaluate(model, cfg, split="test")
     assert metrics["split"] == "Test"
     assert {"accuracy", "precision", "recall", "f1"} <= metrics.keys()
@@ -189,10 +192,10 @@ def test_training_resume_and_evaluation(small_model, tmp_path, monkeypatch):
     best = checkpoint.parent / "best.safetensors"
     runner.train(initialized, initialize_from=best)
     initialization_log = next(
-        (initialized.out_dir / initialized.name / "logs" / "executions").glob("*/rank-0.jsonl")
+        (initialized.out_dir / initialized.name / "logs" / "executions").glob("*/rank-0.jsonl.zst")
     )
     initialization_records = [
-        json.loads(line) for line in initialization_log.read_text().splitlines()
+        event.to_dict() for event in iter_execution_events(initialization_log)
     ]
     source = next(
         record
@@ -227,7 +230,7 @@ def test_training_setup_failure_is_logged_and_unlocks(
     attempts = list((cfg.out_dir / cfg.name / "logs" / "executions").iterdir())
     assert len(attempts) == 2
     for attempt in attempts:
-        records = [json.loads(line) for line in (attempt / "rank-0.jsonl").read_text().splitlines()]
+        records = [event.to_dict() for event in iter_execution_events(attempt / "rank-0.jsonl.zst")]
         assert any(record["event"] == "phase_failed" for record in records)
         assert records[-1]["event"] == "process_completed"
         assert records[-1]["exit_code"] == (130 if interrupted else 1)
