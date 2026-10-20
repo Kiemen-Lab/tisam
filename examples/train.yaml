@@ -9,6 +9,10 @@ model:
 
 data:
   class_names: [void, tissue_a, tissue_b]
+  colormap:
+    void: [0, 0, 0]
+    tissue_a: [220, 80, 80]
+    tissue_b: [80, 160, 220]
   train:
     - path: ./data/train
       metadata:

@@ -55,6 +55,7 @@ class DataConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     class_names: list[str]
+    colormap: dict[str, tuple[StrictInt, StrictInt, StrictInt]] = Field(default_factory=dict)
     train: list[DatasetSource] = Field(default_factory=list)
     validation: list[DatasetSource] = Field(default_factory=list)
     test: list[DatasetSource] = Field(default_factory=list)
@@ -68,6 +69,8 @@ class DataConfig(BaseModel):
     @model_validator(mode="after")
     def validate_sources(self) -> DataConfig:
         """Require one canonical void plus exact, unique tissue identifiers."""
+        if any(not 0 <= channel <= 255 for rgb in self.colormap.values() for channel in rgb):
+            raise ValueError("colormap RGB channels must be integers between 0 and 255")
         if len(self.class_names) < 2 or self.class_names[0] != "void":
             raise ValueError("class_names must start with void and contain tissue classes")
         if len(set(self.class_names)) != len(self.class_names):

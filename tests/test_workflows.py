@@ -50,7 +50,7 @@ class BlockMammoth:
 sys.meta_path.insert(0, BlockMammoth())
 from typer.testing import CliRunner
 from tisam.cli import app
-result = CliRunner().invoke(app, ['train', 'missing.yaml'])
+result = CliRunner().invoke(app, ['train', '--config', 'missing.yaml'])
 assert result.exit_code == 2, (result.exit_code, result.exception, result.output)
 assert 'tisam[train]' in result.output and 'mammoth' in result.output, result.output
 """

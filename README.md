@@ -52,7 +52,7 @@ tests.
 | --- | --- | --- |
 | Base package (no extras) | Construct `TiSAM`, load checkpoints, and run your own tensor-based workflow | Model architecture, configuration, and checkpoint loading |
 | `train` extra | Train and resume models with TiSAM's training workflow | Mammoth, datasets, augmentation, image I/O, and TensorBoard logging |
-| `inference` extra | Predict RGB images, segment TIFF/WSI inputs, or evaluate validation/test tiles | Image I/O, preprocessing, and WSI dependencies, without Mammoth |
+| `inference` extra | Predict RGB images, segment TIFF/WSI inputs, or evaluate validation/test tiles | Image I/O, preprocessing, WSI dependencies, and Mammoth background pipelines |
 | `train,inference` extras | Use both training and inference workflows | Both sets of runtime dependencies |
 | `dev` dependency group | Develop this repository or run its tests | pytest, Ruff, mypy, and PyYAML type stubs; no additional runtime workflow |
 
@@ -274,9 +274,9 @@ Input paths resolve relative to the configuration file. Output paths resolve
 relative to the working directory and default to `./runs`.
 
 ```sh
-uv run --no-sync tisam train examples/train.yaml
-uv run --no-sync tisam eval validate examples/train.yaml runs/tisam/checkpoints/best.safetensors
-uv run --no-sync tisam eval test examples/train.yaml runs/tisam/checkpoints/best.safetensors
+uv run --no-sync tisam train --config examples/train.yaml
+uv run --no-sync tisam eval validate --config examples/train.yaml --checkpoint runs/tisam/checkpoints/best.safetensors
+uv run --no-sync tisam eval test --config examples/train.yaml --checkpoint runs/tisam/checkpoints/best.safetensors
 ```
 
 Training resumes its latest checkpoint by default. Use a new run name for fresh
@@ -343,8 +343,48 @@ segment_wsi(model, "slide.tif", "mask.tif")
 ```
 
 ```sh
-uv run --no-sync tisam eval segment examples/train.yaml weights.safetensors slide.tif mask.tif
+uv run --no-sync tisam eval segment --config examples/train.yaml --checkpoint weights.safetensors \
+  --source slides/ --output predictions/ --check-classify --mini-check-classify
 ```
+
+The CLI uses explicit options instead of positional arguments. Validation and
+Test accept `--output` for the metrics JSON (defaults: `validation.json` and
+`test.json`). Training retains `--checkpoint` for resume and
+`--initialize-from` for weight initialization.
+
+For segmentation, `--source` accepts one RGB TIFF/PNG or a directory of them
+(nonrecursive). `--output` is a directory: each source produces `<stem>.tif`
+with integer class IDs. Duplicate stems are rejected before inference.
+`--check-classify` and `--mini-check-classify` are independent and both default
+to false. They add `check_classification/<stem>.jpg` and
+`check_classification/mini/<stem>.jpg`, respectively. Mini-only mode does not
+save a regular JPG. Both previews blend 30% class color with 70% original RGB;
+mini width and height are reduced tenfold (minimum one pixel).
+
+Preview generation requires `data.colormap`, keyed by the exact names in
+`data.class_names`, with RGB integer triples in [0, 255]. Missing colors fail
+before model loading. Mask-only inference does not require colors. See the
+example YAML; no separate label mapping file is needed.
+
+With default `--resume`, completed masks are reused and missing requested
+previews are generated without rerunning inference. Existing masks are treated
+as explicitly selected results, not verified against a different checkpoint;
+choose a new output directory when changing models or preprocessing. Existing
+JPGs are retained; use a new output directory to change their palette.
+`--no-resume` refuses existing masks. Preview rendering materializes one slide
+and its mask in memory; mask inference itself retains its bounded-memory writer.
+CUDA inference prefetches one input batch on an H2D stream and transfers integer
+prediction cores back through a D2H stream. One Mammoth worker writes Zarr chunks
+while the next batch runs. A second bounded worker fuses/publishes the completed
+TIFF and requested overlays while the next slide is inferred. Each queue accepts
+at most one active job; a slow writer applies backpressure instead of accumulating
+slides or batches. Background failures propagate to the command, accepted jobs
+are drained on exit, and incomplete mask scratch remains resumable. DataLoader
+workers use spawn so they do not fork the background threads or CUDA context.
+CPU inference retains background writing/publication without CUDA transfers.
+
+The Python `segment_wsi` API still takes a single output TIFF path and returns
+only after publishing it; cross-slide overlap is provided by the directory CLI.
 
 `predict` accepts a uint8 HWC RGB image and returns HW labels; request
 `probabilities=True` for CHW probabilities. Pass `mean` and `std` explicitly if

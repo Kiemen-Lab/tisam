@@ -27,7 +27,7 @@ def workflow(module: str, extra: str):
 
 @app.command("train")
 def train_command(
-    config: Path,
+    config: Annotated[Path, typer.Option("--config")],
     resume: Annotated[bool, typer.Option("--resume/--no-resume")] = True,
     checkpoint: Optional[Path] = None,
     initialize_from: Optional[Path] = None,
@@ -62,7 +62,10 @@ def run_evaluation(config: Path, checkpoint: Path, output: Path, split: str, tru
 
 @eval_app.command("validate")
 def validate_command(
-    config: Path, checkpoint: Path, output: Path = Path("validation.json"), trusted: bool = False
+    config: Annotated[Path, typer.Option("--config")],
+    checkpoint: Annotated[Path, typer.Option("--checkpoint")],
+    output: Path = Path("validation.json"),
+    trusted: bool = False,
 ):
     """Evaluate the configured validation tiles and write foreground metrics."""
     run_evaluation(config, checkpoint, output, "validation", trusted)
@@ -70,7 +73,10 @@ def validate_command(
 
 @eval_app.command("test")
 def test_command(
-    config: Path, checkpoint: Path, output: Path = Path("test.json"), trusted: bool = False
+    config: Annotated[Path, typer.Option("--config")],
+    checkpoint: Annotated[Path, typer.Option("--checkpoint")],
+    output: Path = Path("test.json"),
+    trusted: bool = False,
 ):
     """Evaluate the configured held-out test tiles."""
     run_evaluation(config, checkpoint, output, "test", trusted)
@@ -78,35 +84,31 @@ def test_command(
 
 @eval_app.command("segment")
 def segment_command(
-    config: Path,
-    checkpoint: Path,
-    source: Path,
-    output: Path,
+    config: Annotated[Path, typer.Option("--config")],
+    checkpoint: Annotated[Path, typer.Option("--checkpoint")],
+    source: Annotated[Path, typer.Option("--source")],
+    output: Annotated[Path, typer.Option("--output")],
+    check_classify: bool = False,
+    mini_check_classify: bool = False,
     patch_size: int = 1024,
     effective_size: int = 800,
     resume: Annotated[bool, typer.Option("--resume/--no-resume")] = True,
     trusted: bool = False,
 ):
-    """Segment one RGB TIFF/PNG into a tiled TIFF mask with resumable scratch."""
+    """Segment a file or directory into integer masks and optional JPG previews."""
     cfg = load_config(config)
-    module = workflow("tisam.inference", "inference")
-    model = load_model(
+    module = workflow("tisam.inference.batch", "inference")
+    results = module.segment_sources(
+        cfg,
         checkpoint,
-        config=cfg.model,
-        device=cfg.device,
-        sam3_checkpoint=cfg.sam3_checkpoint,
-        trusted=trusted,
-    )
-    result = module.segment_wsi(
-        model,
         source,
         output,
+        check_classify=check_classify,
+        mini_check_classify=mini_check_classify,
         patch_size=patch_size,
         effective_size=effective_size,
-        batch_size=cfg.batch_size,
-        num_workers=cfg.num_workers,
-        mean=cfg.data.mean,
-        std=cfg.data.std,
         resume=resume,
+        trusted=trusted,
     )
-    typer.echo(str(result))
+    for result in results:
+        typer.echo(str(result))

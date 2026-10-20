@@ -101,7 +101,8 @@ terminal events, and log cleanup. TiSAM supplies configuration and checkpoint
 receipts, training metric fields, TensorBoard output, and Python logger routing.
 The lease remains held until checkpoint and log flushes finish. Training uses
 Mammoth 0.9.0's single-process Windows support and compressed event streams;
-inference and data imports remain independent of Mammoth.
+model loading and data imports remain independent of Mammoth. Inference uses
+Mammoth core pipelines without its training runtime or TensorBoard extra.
 
 Older TiSAM versions used a separate `.training.lock`. Stop older training
 processes before upgrading a run: old and new versions do not share the same
@@ -133,3 +134,51 @@ The extraction starts from research source snapshot
 included. The decoder/loss math and supported dual-encoder options are preserved.
 The source is hosted publicly at https://github.com/Kiemen-Lab/tisam. License
 selection, package registry publication and hosted CI remain unconfigured.
+
+## CLI segmentation and previews
+
+All command configuration/checkpoint inputs use explicit named options. The
+segment CLI delegates to `inference.batch.segment_sources`, which inventories
+one file or a nonrecursive directory, checks stem collisions and palette
+coverage, and loads one model lazily for unfinished masks. `inference.wsi`
+retains the single-file integer TIFF and interrupted-scratch resume contract.
+Completed mask reuse is explicit through default CLI resume; it does not infer
+checkpoint identity from an arbitrary final TIFF. `--no-resume` rejects it.
+
+`inference.overlays` consumes completed masks and `DataConfig.colormap`, ordered
+by canonical `class_names`. Independent `--check-classify` and
+`--mini-check-classify` options default false and publish normal and tenfold
+smaller JPGs under `check_classification/` and its `mini/` directory. Neither
+option implies the other. Rendering blends 30% palette color with 70% RGB;
+mini uses area resizing after blending. Missing JPGs can be repaired without
+model loading. JPG writes use temporary files and atomic replacement; existing
+JPGs are retained. Rendering materializes one slide at a time, unlike the
+bounded-memory mask writer. Configuration examples and CLI migration usage
+are maintained in README.md.
+
+## Bounded asynchronous inference
+
+`inference.transfers.BatchPrefetcher` stages one batch ahead on a CUDA H2D
+stream, using pinned DataLoader buffers. `PredictionHandoff` retains the integer
+GPU cores, pinned host buffer and D2H completion event until the writer resolves
+them. CPU runs use the same handoff without CUDA events. The sole Zarr writer is
+Mammoth's `BoundedBackgroundPipeline(max_pending=1)`; it writes each core before
+marking its completion bitmap. Its context drains accepted jobs before source
+resources close or the exclusive scratch lock is released.
+
+`inference.wsi.prepare_wsi` returns a `PreparedMask` only after all predictions
+are committed. This CPU-only object owns the completed Zarr location and lock;
+`publish` reads chunks into a tiled Zstd TIFF, publishes it atomically and removes
+successful scratch. Failure releases the lock while preserving recoverable data.
+`segment_wsi` remains the synchronous single-file API by publishing immediately.
+
+`inference.batch` hands completed slides to a second Mammoth pipeline with one
+active publication. It publishes the TIFF and requested previews while inference
+prepares the next slide. Before handing off that next slide it waits for queue
+capacity. Rejected handoffs release their lock; accepted work is drained even
+on error or interruption. Final exit waits for publication and propagates worker
+failures. Preview-only repair uses this same worker. The maximum is one publishing
+slide plus one being inferred/prepared, not an unbounded collection of WSIs.
+DataLoader uses spawn when workers are requested, avoiding fork after background
+threads/CUDA initialization. Inference depends on Mammoth core via its optional
+extra; model imports and the base wheel still do not require Mammoth.
