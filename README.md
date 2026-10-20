@@ -6,7 +6,7 @@ module, single-process training, validation, and tile/whole-slide inference.
 It contains no datasets or pretrained weights. Client/server applications and
 other segmentation architectures are outside this package.
 
-Source is available at [zydtiger/tisam](https://github.com/zydtiger/tisam).
+Source is available at [Kiemen-Lab/tisam](https://github.com/Kiemen-Lab/tisam).
 No package registry release or project license has been selected yet. Release
 automation is not configured.
 
@@ -30,7 +30,7 @@ locks use portalocker rather than a Unix-only API.
 With Git, uv, and an NVIDIA driver installed, run in PowerShell:
 
 ```powershell
-git clone https://github.com/zydtiger/tisam.git
+git clone https://github.com/Kiemen-Lab/tisam.git
 cd tisam
 uv venv --python 3.12
 uv pip install --torch-backend=auto '.[train,inference]'
@@ -81,16 +81,16 @@ Windows PowerShell and select the PyTorch backend on the target machine:
 
 ```sh
 # Base model API only.
-uv pip install --torch-backend=auto 'tisam @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=auto 'tisam @ git+https://github.com/Kiemen-Lab/tisam.git'
 
 # Training and resume.
-uv pip install --torch-backend=auto 'tisam[train] @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=auto 'tisam[train] @ git+https://github.com/Kiemen-Lab/tisam.git'
 
 # Image/WSI prediction and validation/test evaluation.
-uv pip install --torch-backend=auto 'tisam[inference] @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=auto 'tisam[inference] @ git+https://github.com/Kiemen-Lab/tisam.git'
 
 # Both training and inference.
-uv pip install --torch-backend=auto 'tisam[train,inference] @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=auto 'tisam[train,inference] @ git+https://github.com/Kiemen-Lab/tisam.git'
 ```
 
 For installation from a local checkout, run the corresponding command from the
@@ -153,13 +153,13 @@ require a fixed backend:
 
 ```sh
 # Recommended for installation on the target GPU machine with Python 3.10+.
-uv pip install --torch-backend=auto 'tisam[train,inference] @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=auto 'tisam[train,inference] @ git+https://github.com/Kiemen-Lab/tisam.git'
 
 # CUDA 13.0: requires a compatible Python 3.10+ environment.
-uv pip install --torch-backend=cu130 'tisam[train,inference] @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=cu130 'tisam[train,inference] @ git+https://github.com/Kiemen-Lab/tisam.git'
 
 # CUDA 12.8: also supports Python 3.9 with PyTorch 2.8.0 / torchvision 0.23.0.
-uv pip install --torch-backend=cu128 'tisam[train,inference] @ git+https://github.com/zydtiger/tisam.git'
+uv pip install --torch-backend=cu128 'tisam[train,inference] @ git+https://github.com/Kiemen-Lab/tisam.git'
 
 # The same option works when installing from the project root.
 uv pip install --torch-backend=auto '.[train,inference]'

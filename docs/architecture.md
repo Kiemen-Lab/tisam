@@ -131,5 +131,5 @@ TensorBoard retains dense metrics in each attempt's `tensorboard/` directory.
 The extraction starts from research source snapshot
 `641b4a6f783f58cf16c4c9c8d06b9b09f7bb9a77`; no source-repository history or data is
 included. The decoder/loss math and supported dual-encoder options are preserved.
-The source is hosted publicly at https://github.com/zydtiger/tisam. License
+The source is hosted publicly at https://github.com/Kiemen-Lab/tisam. License
 selection, package registry publication and hosted CI remain unconfigured.

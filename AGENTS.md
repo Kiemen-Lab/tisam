@@ -13,7 +13,7 @@ checkpoint contracts. Keep all instructions self-contained. Examples must use
 portable paths and generic class names. Never put credentials or model weights
 in Git. Preserve required third-party license notices.
 
-The source repository is public on GitHub at https://github.com/zydtiger/tisam.
+The source repository is public on GitHub at https://github.com/Kiemen-Lab/tisam.
 Do not push, publish packages, create release tags, or upload artifacts without
 explicit approval. A project license and package release policy have not been
 selected. Repository publication does not authorize a package or tagged release.

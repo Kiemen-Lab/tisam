@@ -51,8 +51,8 @@ inference = [
 tisam = "tisam.cli:app"
 
 [project.urls]
-Repository = "https://github.com/zydtiger/tisam"
-Issues = "https://github.com/zydtiger/tisam/issues"
+Repository = "https://github.com/Kiemen-Lab/tisam"
+Issues = "https://github.com/Kiemen-Lab/tisam/issues"
 
 [build-system]
 requires = ["hatchling"]
